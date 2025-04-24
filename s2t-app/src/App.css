@@ -1,0 +1,209 @@
+:root {
+  --primary-color: #4a6bff;
+  --secondary-color: #ff6b6b;
+  --background-color: #f8f9fa;
+  --text-color: #333;
+  --border-color: #ddd;
+  --success-color: #28a745;
+  --error-color: #dc3545;
+}
+
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 80vh;
+}
+
+header {
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+header h1 {
+  color: var(--primary-color);
+  margin-bottom: 0.5rem;
+}
+
+header p {
+  color: var(--text-color);
+  opacity: 0.8;
+}
+
+main {
+  flex: 1;
+  background-color: var(--background-color);
+  border-radius: 8px;
+  padding: 2rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+footer {
+  margin-top: 2rem;
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--text-color);
+  opacity: 0.7;
+}
+
+/* AudioTranscriber Component Styles */
+.audio-transcriber {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.audio-transcriber h2 {
+  color: var(--primary-color);
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.service-selector {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin-bottom: 1rem;
+}
+
+.service-selector label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.recording-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.recording-time {
+  font-family: monospace;
+  font-size: 1.2rem;
+  color: var(--secondary-color);
+}
+
+.audio-player {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.audio-player audio {
+  width: 100%;
+  max-width: 500px;
+}
+
+.transcription-controls {
+  display: flex;
+  gap: 1rem;
+}
+
+.error-message {
+  color: var(--error-color);
+  text-align: center;
+  padding: 0.5rem;
+  border: 1px solid var(--error-color);
+  border-radius: 4px;
+  background-color: rgba(220, 53, 69, 0.1);
+}
+
+.transcription-result {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background-color: white;
+}
+
+.transcription-result h3 {
+  color: var(--primary-color);
+  margin-bottom: 0.5rem;
+}
+
+.transcription-text {
+  line-height: 1.6;
+  white-space: pre-wrap;
+  padding: 1rem;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+  font-size: 1.1rem;
+}
+
+.word-timing {
+  margin-top: 1.5rem;
+}
+
+.word-timing h4 {
+  color: var(--primary-color);
+  margin-bottom: 0.5rem;
+}
+
+.words-container {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 0.5rem;
+}
+
+.word-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.word-item:last-child {
+  border-bottom: none;
+}
+
+.word {
+  font-weight: bold;
+}
+
+.timing {
+  color: var(--text-color);
+  opacity: 0.8;
+}
+
+.confidence {
+  color: var(--success-color);
+}
+
+/* Button Styles */
+button {
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 0.6rem 1.2rem;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+button:hover {
+  background-color: #3a5bef;
+}
+
+button:disabled {
+  background-color: #a0a0a0;
+  cursor: not-allowed;
+}
+
+button:focus {
+  outline: 2px solid #8a9cff;
+}
