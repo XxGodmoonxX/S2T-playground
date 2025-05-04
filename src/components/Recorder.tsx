@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import axios from 'axios'
+import OpenAI from 'openai'
 
 interface RecorderProps {
   onTranscriptionReceived: (text: string) => void
@@ -11,10 +12,23 @@ const Recorder: React.FC<RecorderProps> = ({ onTranscriptionReceived, setIsLoadi
   const [error, setError] = useState<string | null>(null)
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null)
   const [recordingTime, setRecordingTime] = useState<number>(0)
+  const [isRealtime, setIsRealtime] = useState<boolean>(true)
+  const [realtimeText, setRealtimeText] = useState<string>('')
+  const [selectedModel, setSelectedModel] = useState<string>('gpt-4o-transcribe')
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
   const timerRef = useRef<number | null>(null)
+  const streamRef = useRef<MediaStream | null>(null)
+  const openaiRef = useRef<OpenAI | null>(null)
+  
+  // OpenAIクライアントの初期化
+  useEffect(() => {
+    openaiRef.current = new OpenAI({
+      apiKey: import.meta.env.VITE_OPENAI_API_KEY || 'your-api-key-here',
+      dangerouslyAllowBrowser: true // フロントエンドでの使用を許可（本番環境では推奨されません）
+    })
+  }, [])
   
   // 録音時間のタイマー処理
   useEffect(() => {
@@ -43,20 +57,52 @@ const Recorder: React.FC<RecorderProps> = ({ onTranscriptionReceived, setIsLoadi
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
   }
 
+  // リアルタイム文字起こし処理
+  const processAudioChunk = async (audioChunk: Blob) => {
+    if (!isRealtime || !openaiRef.current) return
+    
+    try {
+      const transcription = await openaiRef.current.audio.transcriptions.create({
+        file: new File([audioChunk], 'chunk.webm', { type: 'audio/webm' }),
+        model: selectedModel
+      })
+      
+      if (transcription.text) {
+        const newText = transcription.text.trim()
+        if (newText) {
+          const updatedText = realtimeText + ' ' + newText
+          setRealtimeText(updatedText)
+          onTranscriptionReceived(updatedText)
+        }
+      }
+    } catch (err) {
+      console.error('リアルタイム文字起こしに失敗しました:', err)
+    }
+  }
+
   // 録音開始処理
   const startRecording = async () => {
     try {
       setError(null)
       setAudioBlob(null)
       setRecordingTime(0)
+      setRealtimeText('')
       audioChunksRef.current = []
+      onTranscriptionReceived('')
       
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      streamRef.current = stream
       mediaRecorderRef.current = new MediaRecorder(stream)
       
+      // 通常の録音データ取得
       mediaRecorderRef.current.ondataavailable = (event) => {
         if (event.data.size > 0) {
           audioChunksRef.current.push(event.data)
+          
+          // リアルタイムモードの場合、チャンクごとに文字起こし
+          if (isRealtime) {
+            processAudioChunk(event.data)
+          }
         }
       }
       
@@ -65,8 +111,13 @@ const Recorder: React.FC<RecorderProps> = ({ onTranscriptionReceived, setIsLoadi
         setAudioBlob(audioBlob)
       }
       
-      mediaRecorderRef.current.start()
+      // 短い時間間隔でデータを取得（リアルタイム処理用）
+      mediaRecorderRef.current.start(isRealtime ? 3000 : undefined)
       setIsRecording(true)
+      
+      if (isRealtime) {
+        setIsLoading(true)
+      }
     } catch (err) {
       console.error('録音の開始に失敗しました:', err)
       setError('マイクへのアクセスができませんでした。ブラウザの設定でマイクの使用を許可してください。')
@@ -78,38 +129,29 @@ const Recorder: React.FC<RecorderProps> = ({ onTranscriptionReceived, setIsLoadi
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       mediaRecorderRef.current.stop()
       setIsRecording(false)
+      setIsLoading(false)
       
       // マイクのストリームを停止
-      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop())
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop())
+      }
     }
   }
 
-  // OpenAI APIに音声を送信して文字起こしを取得
+  // OpenAI APIに音声を送信して文字起こしを取得（バッチ処理）
   const transcribeAudio = async () => {
-    if (!audioBlob) return
+    if (!audioBlob || !openaiRef.current) return
     
     setIsLoading(true)
     
     try {
-      const formData = new FormData()
-      formData.append('file', audioBlob, 'recording.webm')
-      formData.append('model', 'whisper-1')
+      const transcription = await openaiRef.current.audio.transcriptions.create({
+        file: new File([audioBlob], 'recording.webm', { type: 'audio/webm' }),
+        model: selectedModel
+      })
       
-      // APIキーとエンドポイントの設定
-      // 注意: 実際の実装では、APIキーはサーバーサイドで管理すべきです
-      const response = await axios.post(
-        'https://api.openai.com/v1/audio/transcriptions',
-        formData,
-        {
-          headers: {
-            'Authorization': `Bearer ${import.meta.env.VITE_OPENAI_API_KEY || 'your-api-key-here'}`,
-            'Content-Type': 'multipart/form-data'
-          }
-        }
-      )
-      
-      if (response.data && response.data.text) {
-        onTranscriptionReceived(response.data.text)
+      if (transcription.text) {
+        onTranscriptionReceived(transcription.text)
       }
     } catch (err) {
       console.error('文字起こしに失敗しました:', err)
@@ -124,6 +166,39 @@ const Recorder: React.FC<RecorderProps> = ({ onTranscriptionReceived, setIsLoadi
       <h2 className="text-xl font-bold mb-4 dark:text-white">音声録音</h2>
       
       <div className="flex flex-col items-center">
+        {/* モデル選択 */}
+        <div className="mb-4 w-full">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            文字起こしモデル
+          </label>
+          <select
+            value={selectedModel}
+            onChange={(e) => setSelectedModel(e.target.value)}
+            disabled={isRecording}
+            className="block w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="gpt-4o-transcribe">GPT-4o Transcribe</option>
+            <option value="gpt-4o-mini-transcribe">GPT-4o Mini Transcribe</option>
+          </select>
+        </div>
+        
+        {/* リアルタイム切り替え */}
+        <div className="mb-4 flex items-center">
+          <label className="inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              className="sr-only peer"
+              checked={isRealtime}
+              onChange={() => setIsRealtime(!isRealtime)}
+              disabled={isRecording}
+            />
+            <div className="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+            <span className="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">
+              リアルタイム文字起こし
+            </span>
+          </label>
+        </div>
+        
         {/* 録音時間表示 */}
         <div className="text-2xl font-mono my-4 dark:text-white">
           {formatTime(recordingTime)}
@@ -142,7 +217,7 @@ const Recorder: React.FC<RecorderProps> = ({ onTranscriptionReceived, setIsLoadi
             {isRecording ? '停止' : '録音開始'}
           </button>
           
-          {audioBlob && !isRecording && (
+          {audioBlob && !isRecording && !isRealtime && (
             <button
               onClick={transcribeAudio}
               className="px-6 py-2 rounded-full bg-green-500 hover:bg-green-600 text-white font-medium"
@@ -165,6 +240,13 @@ const Recorder: React.FC<RecorderProps> = ({ onTranscriptionReceived, setIsLoadi
                 }}
               ></div>
             ))}
+          </div>
+        )}
+        
+        {/* リアルタイム文字起こしテキスト */}
+        {isRealtime && isRecording && (
+          <div className="w-full mt-4 text-sm text-gray-600 dark:text-gray-300 border p-2 rounded bg-gray-50 dark:bg-gray-800 max-h-20 overflow-y-auto">
+            {realtimeText || "音声を認識しています..."}
           </div>
         )}
         
