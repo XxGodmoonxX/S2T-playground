@@ -38,7 +38,8 @@ const Recorder: React.FC<RecorderProps> = ({ onTranscriptionReceived, setIsLoadi
   const audioIntervalRef = useRef<number | null>(null)
   
   // 集約した文字起こしテキスト
-  const transcriptionTextRef = useRef<string>('')
+  const transcriptionTextRef = useRef<string>('') // 全ての確定済みテキスト
+  const currentTurnTextRef = useRef<string>('') // 現在のターンで蓄積されている中間テキスト
   
   // OpenAIクライアントの初期化
   useEffect(() => {
@@ -128,22 +129,29 @@ const Recorder: React.FC<RecorderProps> = ({ onTranscriptionReceived, setIsLoadi
         
         // 文字起こし結果の処理
         if (data.text !== undefined) {
-          const text = data.text.trim();
-          console.log('文字起こしテキスト受信:', text, 'isFinal:', data.isFinal);
+          const newTextFragment = data.text.trim(); // サーバーから来たテキスト断片
+          console.log('文字起こしテキスト受信:', newTextFragment, 'isFinal:', data.isFinal);
           
-          if (text) {
-            // isFinalフラグがある場合は最終結果
+          if (newTextFragment) {
             if (data.isFinal) {
-              transcriptionTextRef.current += ' ' + text;
-              const finalText = transcriptionTextRef.current.trim();
-              console.log('最終テキストを設定:', finalText);
-              setRealtimeText(finalText);
-              onTranscriptionReceived(finalText);
+              // 最終結果
+              // newTextFragment はこのターンの最終的な全文
+              transcriptionTextRef.current += (transcriptionTextRef.current ? ' ' : '') + newTextFragment;
+              setRealtimeText(transcriptionTextRef.current.trim());
+              onTranscriptionReceived(transcriptionTextRef.current.trim());
+              currentTurnTextRef.current = ''; // 現在のターンの中間テキストをリセット
             } else {
-              // 中間結果は表示のみを更新
-              const updatedText = transcriptionTextRef.current + ' ' + text;
-              console.log('中間テキストを更新:', updatedText);
-              setRealtimeText(updatedText);
+              // 中間結果
+              // newTextFragment は今回のdelta
+              currentTurnTextRef.current += (currentTurnTextRef.current ? ' ' : '') + newTextFragment;
+              
+              let combinedText = transcriptionTextRef.current;
+              if (combinedText && currentTurnTextRef.current) {
+                combinedText += ' ';
+              }
+              combinedText += currentTurnTextRef.current;
+              
+              setRealtimeText(combinedText.trim());
             }
           }
         }
@@ -223,6 +231,7 @@ const Recorder: React.FC<RecorderProps> = ({ onTranscriptionReceived, setIsLoadi
       transcriptionTextRef.current = ''
       audioChunksRef.current = []
       onTranscriptionReceived('')
+      currentTurnTextRef.current = '' // 追加: 現在のターンの中間テキストをリセット
       
       // マイクの設定を指定
       const constraints = { 
