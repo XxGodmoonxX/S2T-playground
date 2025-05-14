@@ -3,7 +3,7 @@ import axios from 'axios'
 import OpenAI from 'openai'
 
 // WebSocketサーバー設定
-const WS_SERVER_URL = 'ws://localhost:3001';
+const WS_SERVER_URL = `ws://localhost:${import.meta.env.VITE_PORT || 3001}`;
 
 // リアルタイム文字起こし用の型定義
 interface RealtimeTranscription {
