@@ -2,11 +2,16 @@ import React, { useState, useRef } from 'react';
 
 type RecordingStatus = 'idle' | 'recording' | 'error';
 
-const MicrophoneInput: React.FC = () => {
+interface MicrophoneInputProps {
+  onAudioData: (data: Blob) => void;
+}
+
+const MicrophoneInput: React.FC<MicrophoneInputProps> = ({ onAudioData }) => {
   const [status, setStatus] = useState<RecordingStatus>('idle');
   const [error, setError] = useState<string | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
+  const scriptProcessorNodeRef = useRef<ScriptProcessorNode | null>(null);
 
   const startRecording = async () => {
     setStatus('recording');
@@ -14,11 +19,26 @@ const MicrophoneInput: React.FC = () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaStreamRef.current = stream;
+
       const audioContext = new AudioContext();
       audioContextRef.current = audioContext;
+
       const source = audioContext.createMediaStreamSource(stream);
-      // At this point, you could connect the source to other nodes for processing
-      // For now, we're just logging that recording has started.
+
+      const scriptProcessorNode = audioContext.createScriptProcessor(4096, 1, 1);
+      scriptProcessorNodeRef.current = scriptProcessorNode;
+
+      scriptProcessorNode.onaudioprocess = (event) => {
+        const inputBuffer = event.inputBuffer;
+        const inputData = inputBuffer.getChannelData(0); // Mono
+        // Create a Blob from the Float32Array data
+        const blob = new Blob([inputData.buffer], { type: 'application/octet-stream' });
+        onAudioData(blob);
+      };
+
+      source.connect(scriptProcessorNode);
+      scriptProcessorNode.connect(audioContext.destination); // Connect to destination to start processing
+
       console.log('録音開始');
       setStatus('recording');
     } catch (err) {
@@ -32,6 +52,11 @@ const MicrophoneInput: React.FC = () => {
     if (mediaStreamRef.current) {
       mediaStreamRef.current.getTracks().forEach(track => track.stop());
       mediaStreamRef.current = null;
+    }
+    if (scriptProcessorNodeRef.current) {
+      scriptProcessorNodeRef.current.disconnect();
+      scriptProcessorNodeRef.current.onaudioprocess = null;
+      scriptProcessorNodeRef.current = null;
     }
     if (audioContextRef.current) {
       audioContextRef.current.close().then(() => {
