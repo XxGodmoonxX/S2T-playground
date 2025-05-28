@@ -25,7 +25,7 @@ const MicrophoneInput: React.FC<MicrophoneInputProps> = ({ onAudioData }) => {
 
       const source = audioContext.createMediaStreamSource(stream);
 
-      const scriptProcessorNode = audioContext.createScriptProcessor(4096, 1, 1);
+      const scriptProcessorNode = audioContext.createScriptProcessor(16384, 1, 1);
       scriptProcessorNodeRef.current = scriptProcessorNode;
 
       scriptProcessorNode.onaudioprocess = (event) => {
