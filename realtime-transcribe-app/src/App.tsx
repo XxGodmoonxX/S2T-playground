@@ -1,56 +1,102 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import './App.css'
 import MicrophoneInput from './components/MicrophoneInput';
 import openAIService from './services/OpenAIService';
 
 function App() {
   const [transcribedText, setTranscribedText] = useState<string>('');
-  const [isLoading, setIsLoading] = useState<boolean>(false); // isLoading state を追加
-  const [errorMessage, setErrorMessage] = useState<string>(''); // errorMessage state を追加
+  const [isStreamingActive, setIsStreamingActive] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const handleAudioData = async (data: Blob) => {
-    console.log('Audio data received in App:', data);
-    if (data.size === 0) {
-      console.log("Received empty audio data, skipping transcription.");
-      return;
-    }
+  const handleAudioChunk = useCallback((chunk: Float32Array) => {
+    if (!isStreamingActive) return;
+    // The OpenAIService's sendAudioChunk expects ArrayBuffer.
+    // Float32Array.buffer gives the underlying ArrayBuffer.
+    openAIService.sendAudioChunk(chunk.buffer);
+  }, [isStreamingActive]);
 
-    setIsLoading(true); // API呼び出し前にローディング開始
-    setErrorMessage(''); // エラーメッセージをクリア
+  const startStreaming = useCallback(async () => {
+    console.log("Attempting to start streaming...");
+    setIsStreamingActive(true);
+    setIsLoading(true);
+    setTranscribedText('');
+    setErrorMessage(null);
 
-    try {
-      const newText = await openAIService.transcribe(data);
-      console.log("Transcription result:", newText);
-
-      if (newText && newText !== "No transcription result." && !newText.startsWith("Error transcribing:")) {
-        setTranscribedText(prevText => prevText + (prevText ? ' ' : '') + newText);
-        setErrorMessage(''); // 成功時はエラーメッセージをクリア
-      } else if (newText.startsWith("Error transcribing:")) {
-        console.error("Transcription API error:", newText);
-        setErrorMessage(`文字起こしエラー: ${newText}`);
-      } else {
-        // "No transcription result." の場合など、特にエラーではないが結果がない場合
-        setErrorMessage('文字起こし結果がありませんでした。');
+    openAIService.startRealtimeTranscription({
+      model: "gpt-4o-transcribe", // Updated model name
+      language: "ja",  // Specify Japanese
+      onOpen: () => {
+        console.log("WebSocket connection opened.");
+        setIsLoading(false);
+      },
+      onMessage: (newText: string) => {
+        console.log("Received transcript:", newText);
+        setTranscribedText(prevText => prevText + newText);
+      },
+      onError: (error: Event | Error) => {
+        console.error("WebSocket error:", error);
+        const errorMsg = error instanceof Error ? error.message : (typeof error === 'string' ? error : '不明な接続エラーが発生しました。');
+        setErrorMessage(`リアルタイム文字起こしエラー: ${errorMsg}`);
+        setIsLoading(false);
+        setIsStreamingActive(false); // Stop streaming on error
+      },
+      onClose: () => {
+        console.log("WebSocket connection closed.");
+        setIsLoading(false);
+        // Only set isStreamingActive to false if it wasn't an error that already did so.
+        // Or if user intentionally stopped.
+        // For now, if it closes unexpectedly, we reflect that.
+        setIsStreamingActive(current => {
+          if (current) { // If it was active and closed unexpectedly
+            setErrorMessage(prevErr => prevErr || "リアルタイム接続が予期せず終了しました。");
+          }
+          return false;
+        });
       }
-    } catch (error) {
-      console.error("Error in transcription process:", error);
-      setErrorMessage(`文字起こし中に予期せぬエラーが発生しました: ${error instanceof Error ? error.message : String(error)}`);
-    } finally {
-      setIsLoading(false); // API呼び出し完了後にローディング終了
-    }
-  };
+    });
+  }, []); // Dependencies: openAIService is a singleton, so not needed.
+
+  const stopStreaming = useCallback(async () => {
+    console.log("Attempting to stop streaming...");
+    setIsStreamingActive(false); // This will also make MicrophoneInput inactive via prop
+    openAIService.stopRealtimeTranscription();
+    // isLoading should be handled by onClose or onError of startRealtimeTranscription
+  }, []); // Dependencies: openAIService is a singleton.
 
   return (
-    <div>
-      <MicrophoneInput onAudioData={handleAudioData} />
-      {isLoading && <p>文字起こし中...</p>} {/* ローディング表示 */}
-      {errorMessage && <p style={{ color: 'red' }}>{errorMessage}</p>} {/* エラーメッセージ表示 */}
-      <div>
-        <h2>文字起こし結果：</h2>
-        <p>{transcribedText}</p>
-      </div>
+    <div className="App">
+      <header className="App-header">
+        <h1>リアルタイム文字起こし</h1>
+      </header>
+      <main>
+        <MicrophoneInput
+          isActive={isStreamingActive}
+          onAudioChunk={handleAudioChunk}
+        />
+        <div className="controls">
+          {!isStreamingActive && !isLoading && (
+            <button onClick={startStreaming} disabled={isLoading}>
+              ストリーミング開始
+            </button>
+          )}
+          {(isStreamingActive || isLoading) && (
+            <button onClick={stopStreaming} disabled={!isStreamingActive && !isLoading}>
+              {isLoading && !isStreamingActive ? "接続中..." : "ストリーミング停止"}
+            </button>
+          )}
+        </div>
+
+        {isLoading && <p>接続中または処理中...</p>}
+        {errorMessage && <p style={{ color: 'red' }}>エラー: {errorMessage}</p>}
+
+        <div className="transcription-container">
+          <h2>文字起こし結果：</h2>
+          <p>{transcribedText || "ここに文字起こし結果が表示されます..."}</p>
+        </div>
+      </main>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;

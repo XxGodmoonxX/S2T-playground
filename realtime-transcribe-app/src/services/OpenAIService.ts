@@ -75,7 +75,7 @@ class OpenAIService {
       return;
     }
 
-    const model = config.model || 'gpt-4o';
+    const model = config.model || 'gpt-4o-transcribe'; // Updated model name
     const language = config.language || 'ja';
 
     // Construct WebSocket URL (this is an assumption and might need adjustment)
