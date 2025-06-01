@@ -18,13 +18,21 @@ const MicrophoneInput: React.FC<MicrophoneInputProps> = ({ onAudioChunk, isActiv
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const scriptProcessorNodeRef = useRef<ScriptProcessorNode | null>(null);
 
+  const startRecording = useCallback(async () => {
+    if (status === 'recording' || status === 'stopping' || isTransitioning.current) {
+      console.log('MicrophoneInput: Already recording, stopping, or transitioning. Cannot start.');
+      return;
+    }
+    isTransitioning.current = true;
+    console.log('MicrophoneInput: Attempting to start recording...');
+    setStatus('recording'); // Optimistically set status
+    setError(null);
+    // if (onStatusChange) onStatusChange('recording');
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaStreamRef.current = stream;
 
-      // Ensure AudioContext is created only once or handled correctly if it can be closed and reopened.
-      // For simplicity, we create it on starting. If issues with rapidly starting/stopping,
-      // this might need to be managed more carefully (e.g. created once and reused).
       const newAudioContext = new AudioContext();
       audioContextRef.current = newAudioContext;
 
@@ -33,31 +41,30 @@ const MicrophoneInput: React.FC<MicrophoneInputProps> = ({ onAudioChunk, isActiv
       scriptProcessorNodeRef.current = newScriptProcessorNode;
 
       newScriptProcessorNode.onaudioprocess = (event: AudioProcessingEvent) => {
-        // Check if still supposed to be recording, to prevent processing after stop request
-        if (status !== 'recording' || !isActive) return;
-
+        if (status !== 'recording' || !isActive) { // Check status and isActive flag
+          return;
+        }
         const inputBuffer = event.inputBuffer;
-        const rawPcmData = inputBuffer.getChannelData(0); // Get Float32Array for the first channel
-
-        // It's often safer to send a copy if the underlying buffer might be reused or changed.
+        const rawPcmData = inputBuffer.getChannelData(0);
         onAudioChunk(new Float32Array(rawPcmData));
       };
 
       source.connect(newScriptProcessorNode);
-      newScriptProcessorNode.connect(newAudioContext.destination); // Necessary to make onaudioprocess fire
+      newScriptProcessorNode.connect(newAudioContext.destination);
 
       console.log('MicrophoneInput: Recording started successfully.');
-      // setStatus('recording'); // Already set optimistically
-      // if (onStatusChange) onStatusChange('recording');
+      // Note: isTransitioning.current will be set to false in the finally block
     } catch (err) {
       console.error('MicrophoneInput: Failed to access microphone.', err);
       setError(`マイクへのアクセスに失敗しました: ${err instanceof Error ? err.message : String(err)}`);
       setStatus('error');
       // if (onStatusChange) onStatusChange('error', `マイクへのアクセスに失敗しました: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
+      // Only set to false if not in an error state that should persist isTransitioning
+      // However, for startRecording, we generally want to allow another attempt or stop.
       isTransitioning.current = false;
     }
-  }, [onAudioChunk, status, isActive]); // Added isActive to dependencies
+  }, [onAudioChunk, status, isActive]); // Dependencies for useCallback
 
   const stopRecording = useCallback(async () => {
     if (status === 'idle' || status === 'stopping') {
