@@ -3,10 +3,10 @@ import React, { useState, useRef } from 'react';
 type RecordingStatus = 'idle' | 'recording' | 'error';
 
 interface MicrophoneInputProps {
-  onAudioData: (data: Blob) => void;
+  onAudioChunk: (chunk: Float32Array) => void;
 }
 
-const MicrophoneInput: React.FC<MicrophoneInputProps> = ({ onAudioData }) => {
+const MicrophoneInput: React.FC<MicrophoneInputProps> = ({ onAudioChunk }) => {
   const [status, setStatus] = useState<RecordingStatus>('idle');
   const [error, setError] = useState<string | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -30,50 +30,13 @@ const MicrophoneInput: React.FC<MicrophoneInputProps> = ({ onAudioData }) => {
 
       scriptProcessorNode.onaudioprocess = (event) => {
         const inputBuffer = event.inputBuffer;
-        const inputData = inputBuffer.getChannelData(0); // Mono Float32Array
+        // Get the raw Float32Array data for the first channel
+        const rawPcmData = inputBuffer.getChannelData(0);
 
-        if (!audioContextRef.current) {
-          console.error("AudioContext is not available for sample rate.");
-          return;
-        }
-
-        // --- WAVエンコード処理開始 ---
-        const sampleRate = audioContextRef.current.sampleRate;
-        const numChannels = 1;
-        const bitDepth = 16;
-
-        let buffer = new ArrayBuffer(44 + inputData.length * 2); // 44バイトのヘッダ + 16ビットPCMデータ
-        let view = new DataView(buffer);
-
-        // RIFFヘッダ
-        writeString(view, 0, 'RIFF');
-        view.setUint32(4, 36 + inputData.length * 2, true); // ファイルサイズ - 8
-        writeString(view, 8, 'WAVE');
-
-        // FMTチャンク
-        writeString(view, 12, 'fmt ');
-        view.setUint32(16, 16, true); // fmtチャンクのサイズ
-        view.setUint16(20, 1, true);  // フォーマットID (PCM)
-        view.setUint16(22, numChannels, true); // チャンネル数
-        view.setUint32(24, sampleRate, true); // サンプリングレート
-        view.setUint32(28, sampleRate * numChannels * (bitDepth / 8), true); // データ速度 (Byte/sec)
-        view.setUint16(32, numChannels * (bitDepth / 8), true); // ブロックサイズ (Byte/sample)
-        view.setUint16(34, bitDepth, true); // サンプルあたりのビット数
-
-        // DATAチャンク
-        writeString(view, 36, 'data');
-        view.setUint32(40, inputData.length * 2, true); // 波形データのサイズ
-
-        // PCMデータ (Float32 to Int16)
-        let offset = 44;
-        for (let i = 0; i < inputData.length; i++, offset += 2) {
-          let s = Math.max(-1, Math.min(1, inputData[i]));
-          view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
-        }
-        // --- WAVエンコード処理終了 ---
-
-        const wavBlob = new Blob([view], { type: 'audio/wav' });
-        onAudioData(wavBlob);
+        // Send the raw PCM data chunk
+        // A copy might be needed if the underlying buffer is reused by the browser: new Float32Array(rawPcmData)
+        // For now, let's pass the direct reference. If issues arise (e.g. data corruption), revisit this.
+        onAudioChunk(rawPcmData);
       };
 
       source.connect(scriptProcessorNode);
@@ -87,13 +50,6 @@ const MicrophoneInput: React.FC<MicrophoneInputProps> = ({ onAudioData }) => {
       setStatus('error');
     }
   };
-
-  // Helper function
-  function writeString(view: DataView, offset: number, string: string) {
-    for (let i = 0; i < string.length; i++) {
-      view.setUint8(offset + i, string.charCodeAt(i));
-    }
-  }
 
   const stopRecording = () => {
     if (mediaStreamRef.current) {
