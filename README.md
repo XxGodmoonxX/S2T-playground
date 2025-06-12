@@ -5,6 +5,12 @@ streams microphone audio to OpenAI's Realtime API for GPT‑4o transcription.
 
 ## Development
 
+Before building, copy `.env.example` to `.env` and add your API key:
+```bash
+cp .env.example .env
+```
+Edit `.env` and fill in `OPENAI_API_KEY`. The `.env` file is gitignored.
+
 1. Compile the TypeScript files:
    ```bash
    npx tsc
