@@ -10,6 +10,7 @@ Before building, copy `.env.example` to `.env` and add your API key:
 cp .env.example .env
 ```
 Edit `.env` and fill in `OPENAI_API_KEY`. The `.env` file is gitignored.
+The compiled JavaScript will be generated in `dist/`, which is also gitignored.
 
 1. Compile the TypeScript files:
    ```bash
