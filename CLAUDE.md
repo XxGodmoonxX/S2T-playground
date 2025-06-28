@@ -13,15 +13,6 @@
 - 作業の区切りごとに適宜gitにコミットする
 - コミットメッセージはConventional Commitルールに従う
 
-#### コミットメッセージの形式
-```
-<type>: <description>
-
-🤖 Generated with [Claude Code](https://claude.ai/code)
-
-Co-Authored-By: Claude <noreply@anthropic.com>
-```
-
 #### コミットタイプ
 - `feat:` - 新機能の追加
 - `fix:` - バグ修正
