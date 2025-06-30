@@ -1,0 +1,57 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# S2T-playground プロジェクト開発ガイドライン
+
+このプロジェクトは **React + TypeScript + Tailwind CSS + Vite** を使用したフロントエンドアプリケーションです。
+
+## 技術スタック
+- React with TypeScript
+- Tailwind CSS for styling  
+- Vite (開発サーバー・ビルドツール)
+- ESLint (コード品質管理)
+
+## 開発時の重要なルール
+
+### コーディング規約
+- TypeScriptの型定義を必ず行う
+- Tailwind CSSを使用してスタイリングする
+- ESLintのルールに従ってコードを記述する
+
+### Gitワークフロー
+- protectedブランチ（main、develop）では直接作業せず、新しいブランチを作成する
+- protectedブランチでない場合は現在のブランチで直接作業可能
+- ブランチ名は機能に応じて適切に命名する（例: `feat/add-user-auth`, `fix/button-styling`）
+
+### コミットルール
+- 作業の区切りごとに適宜gitにコミットする  
+- コミットメッセージは **Conventional Commit** ルールに従う
+
+#### コミットタイプ
+- `feat:` - 新機能の追加
+- `fix:` - バグ修正  
+- `docs:` - ドキュメントの変更
+- `style:` - コードスタイルの変更（機能に影響しない）
+- `refactor:` - リファクタリング
+- `test:` - テストの追加・修正
+- `chore:` - その他の変更（ビルド、依存関係など）
+
+#### コミットメッセージ例
+- `feat: ユーザー認証機能を追加`
+- `fix: ボタンのスタイリングを修正`
+- `docs: READMEを更新`
+
+### 開発コマンド
+- `npm install` - 依存関係のインストール
+- `npm run dev` - 開発サーバー起動
+- `npm run build` - プロダクションビルド
+- `npm run lint` - ESLintによるコードチェック
+- `npm run preview` - ビルド結果のプレビュー
+
+## 応答言語
+- **必ず日本語で応答する**
+- コメントやドキュメントも日本語で記述する
+
+@CLAUDE.md
