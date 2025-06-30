@@ -74,11 +74,13 @@ export const useAudioRecorder = () => {
     setState((prev: RecordingState) => ({ ...prev, isProcessing: true, error: null }));
 
     try {
-      // WebM形式をMP3に変換（簡易的にWebMのまま送信）
+      // GPT-4o Transcribeを使用
       const formData = new FormData();
       formData.append('file', state.audioBlob, 'audio.webm');
-      formData.append('model', 'whisper-1');
+      formData.append('model', 'gpt-4o-transcribe');
       formData.append('language', 'ja');
+      formData.append('response_format', 'verbose_json');
+      formData.append('timestamp_granularities[]', 'word');
 
       const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
         method: 'POST',

@@ -9,7 +9,7 @@ function App() {
             S2T Playground
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            GPT-4o Whisperを使用したリアルタイム音声文字起こしアプリケーション
+            GPT-4o Transcribeを使用したリアルタイム音声文字起こしアプリケーション
           </p>
         </div>
         
@@ -18,7 +18,7 @@ function App() {
         <div className="mt-12 text-center">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-lg shadow-sm text-sm text-gray-600">
             <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-            React + TypeScript + Tailwind CSS + OpenAI Whisper
+            React + TypeScript + Tailwind CSS + GPT-4o Transcribe
           </div>
         </div>
       </div>

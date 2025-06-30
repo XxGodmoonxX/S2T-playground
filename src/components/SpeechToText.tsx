@@ -31,7 +31,7 @@ export const SpeechToText = () => {
   return (
     <div className="w-full max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-lg">
       <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
-        🎤 Speech to Text
+        🎤 Speech to Text (GPT-4o Transcribe)
       </h2>
 
       {/* API Key Input */}
@@ -139,8 +139,13 @@ export const SpeechToText = () => {
           <li>OpenAI APIキーを入力してください</li>
           <li>「録音開始」ボタンを押してマイクの使用を許可してください</li>
           <li>音声を話してから「録音停止」ボタンを押してください</li>
-          <li>「文字起こし実行」ボタンを押して結果を取得してください</li>
+          <li>「文字起こし実行」ボタンを押してGPT-4o Transcribeで結果を取得してください</li>
         </ol>
+        <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-md">
+          <p className="text-green-800 text-xs">
+            <strong>✨ GPT-4o Transcribe</strong>: Whisper-1より高精度で、単語レベルのタイムスタンプも取得可能です
+          </p>
+        </div>
       </div>
     </div>
   );
