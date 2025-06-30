@@ -6,7 +6,7 @@
       "Bash(git commit:*)",
       "Bash(npm run lint)",
       "Bash(node -v)",
-      "Bash(node --version)",
+      "Bash(node --version)"
     ],
     "deny": []
   }
