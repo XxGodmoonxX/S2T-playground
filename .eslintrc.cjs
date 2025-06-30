@@ -3,21 +3,30 @@ module.exports = {
   env: { browser: true, es2020: true },
   extends: [
     'eslint:recommended',
-    '@typescript-eslint/recommended',
+    'plugin:@typescript-eslint/recommended',
+    'plugin:react/recommended',
+    'plugin:react-hooks/recommended',
   ],
   ignorePatterns: ['dist', '.eslintrc.cjs'],
   parser: '@typescript-eslint/parser',
   parserOptions: {
     ecmaVersion: 'latest',
     sourceType: 'module',
-    project: ['./tsconfig.json', './tsconfig.node.json'],
-    tsconfigRootDir: __dirname,
+    ecmaFeatures: {
+      jsx: true,
+    },
   },
-  plugins: ['react-refresh', '@typescript-eslint'],
+  plugins: ['react-refresh', '@typescript-eslint', 'react', 'react-hooks'],
+  settings: {
+    react: {
+      version: 'detect',
+    },
+  },
   rules: {
     'react-refresh/only-export-components': [
       'warn',
       { allowConstantExport: true },
     ],
+    'react/react-in-jsx-scope': 'off',
   },
 }
