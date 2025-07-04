@@ -1,23 +1,26 @@
-import { useState } from 'react'
+import { AudioDetector } from './components/AudioDetector'
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-      <div className="bg-white p-8 rounded-lg shadow-md">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6 text-center">
-          S2T Playground
-        </h1>
-        <div className="text-center">
-          <button
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mb-4"
-            onClick={() => setCount((count) => count + 1)}
-          >
-            count is {count}
-          </button>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      <div className="w-full max-w-lg">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+            S2T Playground
+          </h1>
           <p className="text-gray-600">
-            React + TypeScript + Tailwind CSS環境が正常に動作しています
+            Speech-to-Text 音声検出デモ
+          </p>
+        </div>
+        
+        <AudioDetector 
+          volumeThreshold={0.01}
+          silenceDuration={1500}
+        />
+        
+        <div className="mt-8 text-center">
+          <p className="text-sm text-gray-500">
+            ブラウザでマイクの使用を許可してください
           </p>
         </div>
       </div>
